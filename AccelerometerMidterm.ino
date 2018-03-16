@@ -3,9 +3,6 @@
 long xAccelRaw, yAccelRaw, zAccelRaw;
 float xAccelNormal, yAccelNormal, zAccelNormal;
 
-long xGyroRaw, yGyroRaw, zGyroRaw;
-float xGyroNormal,yGyroNormal, zGyroNormal;
-
 int buttonPin = 7;
 int buttonState = 0;
 int redPin = 11;
@@ -44,7 +41,7 @@ void setup()
 
 void loop()
 {
-  buttonState = digitalRead(buttonPin);
+  buttonState = digitalRead(buttonPin); //Using polling. Unefficient but sufficient for the project
   getAcceleration();
   getGyroscope();
   normalizeValues();
@@ -61,16 +58,15 @@ void loop()
     beepMode = false;
   }
 
+  //Taking absolute values because we do not care what direction the acceleration is acting upon
   if(beepMode)
-  {
-      if( (abs(xAccelNormal) > .25 && abs(xAccelNormal) <.35) || (abs(yAccelNormal) > .25 && abs(yAccelNormal) < .35) )
+  { 
+    if( (abs(xAccelNormal) > .25 && abs(xAccelNormal) <.35) || (abs(yAccelNormal) > .25 && abs(yAccelNormal) < .35) )
     {
-      //Sound low sound
       tone(8, 500, 100);
     }
     else if( (abs(xAccelNormal) > .35 && abs(xAccelNormal) <.45) || (abs(yAccelNormal) > .35 && abs(yAccelNormal) < .45) )
     {
-      //Sound medium sound
       tone(8,1000, 100);
     }
     else if( (abs(xAccelNormal) > .45 && abs(xAccelNormal) <.55) || (abs(yAccelNormal) > .45 && abs(yAccelNormal) < .55) )
@@ -82,43 +78,40 @@ void loop()
       tone(8, 2000, 100);
     }
 
-    analogWrite(redPin, 0);
+    analogWrite(redPin, 0); //Makes sure when in this mode that the LED will not turn on
     analogWrite(greenPin, 0);
     analogWrite(bluePin, 0);
 
   }
-  else
+  else //Only when the button is pressed
   {
-    if(abs(xAccelNormal) > .6) //Aqua
+    //Even though gravity acting on an axis would be equal to 1g, the threshold is set at .6g because of factory offsets and because we
+    //want the light to turn as gravity begins to noticeably pull on a certain axis and not just when it is fully acting on that axis.
+    
+    if(abs(xAccelNormal) > .6) //Aqua when gravity acting on x-axis
     {
       analogWrite(redPin, 0);
       analogWrite(greenPin, 255);
       analogWrite(bluePin, 255);
     }
-    else if(abs(yAccelNormal) >.6) //Yellow
+    else if(abs(yAccelNormal) >.6) //Yellow when gravity acting on y-axis
     {
       analogWrite(redPin, 255);
       analogWrite(greenPin, 255);
       analogWrite(bluePin, 0);
     }
-    else if(abs(zAccelNormal) > .6) //Purple
+    else if(abs(zAccelNormal) > .6) //Purple when gravity acting on z-axis
     {
       analogWrite(redPin, 80);
       analogWrite(greenPin, 0);
       analogWrite(bluePin, 80);
     }
-    
-    
-
-  }
-
-  
-  
+  }  
 }
 
 void getAcceleration()
 {
-  Wire.beginTransmission(0b1101000);
+  Wire.beginTransmission(0b1101000); //Begin I2C communication
   Wire.write(59); //Begin communication with accelerometer values register
   Wire.endTransmission();
   Wire.requestFrom(0b1101000, 6); // Requesting accelerometer data from registers 59-64
@@ -128,27 +121,11 @@ void getAcceleration()
   zAccelRaw = Wire.read() <<8 | Wire.read(); //Z accelerometer value
 }
 
-void getGyroscope()
-{
-  Wire.beginTransmission(0b1101000);
-  Wire.write(67);
-  Wire.endTransmission();
-  Wire.requestFrom(0b1101000, 6);
-  while(Wire.available() < 6); //Wait until all 6 registers' values load
-  xGyroRaw = Wire.read() << 8 | Wire.read();
-  yGyroRaw = Wire.read() << 8 | Wire.read();
-  zGyroRaw = Wire.read() << 8 | Wire.read();
-}
-
 void normalizeValues()
 {
-  xAccelNormal = (xAccelRaw / 16384.0); //Convert it to G's
+  xAccelNormal = (xAccelRaw / 16384.0); //Converts it to G's. The divisor depends on the range of the measurements selected (+-2g)
   yAccelNormal = (yAccelRaw / 16384.0);
   zAccelNormal = (zAccelRaw / 16384.0);
-
-  xGyroNormal = (xGyroRaw / 131.0); //Degrees per second
-  yGyroNormal = (yGyroRaw / 131.0);
-  zGyroNormal = (zGyroRaw / 131.0);
 }
 
 
